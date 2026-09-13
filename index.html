@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BRAWL DELUXE - 見下ろし型対戦アクション</title>
+<meta name="description" content="オリジナルファイター10体で戦う、見下ろし型3vs3&バトルロイヤル対戦アクションゲーム。ジェムグラブ・ショーダウン・ブロールボールの全3モード、CPU4段階、PC/スマホ対応。">
+<link rel="canonical" href="https://kaikomziu.github.io/brawl-deluxe/">
+<meta property="og:title" content="BRAWL DELUXE">
+<meta property="og:description" content="オリジナルファイター10体で戦う見下ろし型対戦アクション。ジェムグラブ・ショーダウン・ブロールボールの3モード搭載。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kaikomziu.github.io/brawl-deluxe/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="screenTitle" class="screen">
+  <div class="bgGlow"></div>
+  <div class="titleWrap">
+    <h1 class="logo">BRAWL <span>DELUXE</span></h1>
+    <p class="tagline">オリジナルファイター10体で戦う見下ろし型対戦アクション</p>
+    <div class="titleButtons">
+      <button id="btnPlay" class="bigBtn">▶ PLAY</button>
+      <button id="btnHowTo" class="smallBtn">❓ 遊び方</button>
+      <button id="btnSettingsTitle" class="smallBtn">⚙️ 設定</button>
+    </div>
+    <div class="versionTagWrap">v<span id="versionTag"></span></div>
+  </div>
+</div>
+
+<div id="screenBrawlerSelect" class="screen hidden">
+  <div class="headerBar"><button id="btnBrawlerBack" class="backBtn">←</button><h2>ファイターを選択</h2><div id="totalTrophies" class="trophyTotal"></div></div>
+  <div id="brawlerGrid" class="brawlerGrid"></div>
+  <div id="brawlerDetail" class="brawlerDetail hidden"></div>
+  <button id="btnBrawlerNext" class="bigBtn bottomBtn">次へ ▶</button>
+</div>
+
+<div id="screenModeSelect" class="screen hidden">
+  <div class="headerBar"><button id="btnModeBack" class="backBtn">←</button><h2>モードを選択</h2></div>
+  <div id="modeGrid" class="modeGrid"></div>
+  <h3 class="diffTitle">CPUの強さ</h3>
+  <div id="diffGrid" class="diffGrid"></div>
+  <button id="btnStartMatch" class="bigBtn bottomBtn" disabled>⚔ 対戦開始</button>
+</div>
+
+<div id="screenSettings" class="screen hidden">
+  <div class="headerBar"><button id="btnBackSettings" class="backBtn">←</button><h2>設定</h2></div>
+  <div class="settingsBox">
+    <label class="settingRow">音量<input type="range" id="volumeSlider" min="0" max="1" step="0.05"></label>
+    <label class="settingRow checkRow"><input type="checkbox" id="muteToggle"> ミュート</label>
+  </div>
+</div>
+
+<div id="screenHowTo" class="screen hidden">
+  <div class="headerBar"><button id="btnBackHowTo" class="backBtn">←</button><h2>遊び方</h2></div>
+  <div class="howToBox">
+    <h3>🎮 操作方法</h3>
+    <p><b>PC:</b> WASD/矢印キーで移動、マウスで狙う、左クリック(長押しで連射)で攻撃、右クリックまたはSpaceで必殺技。</p>
+    <p><b>スマホ:</b> 左スティックで移動、右スティックを倒すとその方向へ攻撃、💥ボタンで必殺技。</p>
+    <h3>💎 ジェムグラブ</h3>
+    <p>中央のジェム鉱山からジェムが湧く。拾って10個以上チームで持ったまま15秒耐えれば勝利。倒されると持っているジェムを落とす。</p>
+    <h3>🏆 ショーダウン</h3>
+    <p>10人の一人用バトルロイヤル。安全地帯の外はダメージを受ける。パワーキューブを拾うと強化。最後の1人になれば優勝。</p>
+    <h3>⚽ ブロールボール</h3>
+    <p>ボールを相手ゴールへ運べば1点。ボールを持っている相手を攻撃すると落とさせられる。先に2点取ったチームの勝ち。</p>
+    <h3>🌿 茂み</h3>
+    <p>茂みに入ると近くにいない限り相手から見えなくなる。奇襲や回復に活用しよう。</p>
+  </div>
+</div>
+
+<div id="hud" class="screen hidden">
+  <canvas id="gameCanvas"></canvas>
+  <div class="hudTopBar">
+    <div id="hudTop" class="hudTopScore"></div>
+    <div id="hudTimer" class="hudTimer"></div>
+    <button id="btnPause" class="pauseBtn">⏸</button>
+  </div>
+  <div class="hudBottomBar">
+    <div class="hudPlayerBox">
+      <div id="hudPlayerIcon" class="hudPlayerIcon"></div>
+      <div class="hudBars">
+        <div class="healthBarOuter"><div id="hudHealthFill" class="healthBarFill"></div><span id="hudHealthText" class="healthText"></span></div>
+        <div id="hudAmmoPips" class="ammoPips"></div>
+      </div>
+    </div>
+    <div class="superBox">
+      <div class="superBarOuter"><div id="hudSuperFill" class="superBarFill"></div></div>
+      <div id="hudSuperLabel" class="superLabel">必殺技</div>
+    </div>
+  </div>
+  <div id="countdownOverlay" class="countdownOverlay hidden"><div id="countdownText"></div></div>
+  <div id="respawnOverlay" class="respawnOverlay hidden"><div id="respawnText"></div></div>
+
+  <div id="joyMove" class="joyBase joyLeft"><div id="joyMoveKnob" class="joyKnob"></div></div>
+  <div id="joyAim" class="joyBase joyRight"><div id="joyAimKnob" class="joyKnob"></div></div>
+  <button id="btnSuper" class="touchSuperBtn">💥</button>
+
+  <div id="pauseModal" class="pauseModal hidden">
+    <div class="pauseBox">
+      <h2>一時停止</h2>
+      <button id="btnResume" class="bigBtn">▶ 再開</button>
+      <button id="btnPauseSettings" class="smallBtn">⚙️ 設定</button>
+      <button id="btnQuit" class="smallBtn">🏠 メニューに戻る</button>
+    </div>
+  </div>
+</div>
+
+<div id="screenResults" class="screen hidden">
+  <div class="resultsBox">
+    <h1 id="resultTitle"></h1>
+    <div id="resultReason" class="resultReason"></div>
+    <div id="resultTrophy" class="resultTrophy"></div>
+    <div id="resultStats" class="resultStats"></div>
+    <button id="btnRematch" class="bigBtn">🔁 もう一度</button>
+    <button id="btnResultsMenu" class="smallBtn">🏠 メニューへ</button>
+  </div>
+</div>
+
+<script src="js/version.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/modes.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
