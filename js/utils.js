@@ -39,6 +39,14 @@ function fmtTime(sec) {
 }
 function vecFromAngle(a, len) { return { x: Math.cos(a) * len, y: Math.sin(a) * len }; }
 
+// "#rrggbb" を白方向にamt(0〜1)だけ明るくする(グラデーション用のハイライト色作り)
+function lightenColor(hex, amt) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  const nr = Math.round(r + (255 - r) * amt), ng = Math.round(g + (255 - g) * amt), nb = Math.round(b + (255 - b) * amt);
+  return `rgb(${nr},${ng},${nb})`;
+}
+
 // localStorage 保存
 const SAVE_KEY = "brawldeluxe_save_v1";
 function loadSave() {

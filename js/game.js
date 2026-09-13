@@ -205,4 +205,5 @@ function render(now) {
   ctx.translate(VIEW_W / 2 - Camera.x, VIEW_H / 2 - Camera.y);
   if (Game.mode) drawWorld(ctx, Game.mode, now);
   ctx.restore();
+  if (Game.mode) drawLowHpVignette(ctx, Game.mode, now);
 }

@@ -95,13 +95,34 @@ function updateBotAI(f, mode, now, dt) {
   } else {
     runCombatObjective(f, mode, now, diff);
   }
+  applyStuckEscape(f, now);
+}
+
+// 上記のどの移動ロジックを通っても壁の角などに引っかかって進めていない場合の保険。
+// 一定時間ほとんど動けていなければ、ランダムな方向へ短時間逃がしてから経路を計算し直させる。
+function applyStuckEscape(f, now) {
+  if (!f._stuckCheckAt || now > f._stuckCheckAt) {
+    if (f._stuckPos) {
+      const moved = dist(f.x, f.y, f._stuckPos.x, f._stuckPos.y);
+      if (moved < 14 && (f.moveX || f.moveY)) {
+        f._unstuckUntil = now + 0.4;
+        f._unstuckAngle = rand(0, Math.PI * 2);
+        f._path = null; // キャッシュ済み経路も破棄して再計算させる
+      }
+    }
+    f._stuckPos = { x: f.x, y: f.y };
+    f._stuckCheckAt = now + 0.8;
+  }
+  if (f._unstuckUntil && now < f._unstuckUntil) {
+    f.moveX = Math.cos(f._unstuckAngle); f.moveY = Math.sin(f._unstuckAngle);
+  }
 }
 
 function runCombatObjective(f, mode, now, diff) {
   if (mode.id === "gemgrab") {
     if (f.carryingGems >= 3 && f.hp / f.maxHp < 0.55) {
       const home = f.team === "A" ? mode.map.spawnsA[0] : mode.map.spawnsB[0];
-      setMoveToward(f, mode, home.x, home.y);
+      moveSmart(f, mode, home.x, home.y, now);
     }
   }
 }
@@ -111,7 +132,7 @@ function runObjectiveAI(f, mode, now, diff, hasEnemyNearby) {
     // 相手が見えていない間は、最初は相手のスポーン方面へ、それ以降はマップ内を巡回して捜す
     if (f.hp / f.maxHp < 0.3 && !hasEnemyNearby) {
       const bush = findNearestBushTile(mode, f);
-      if (bush) { setMoveToward(f, mode, bush.x, bush.y); return; }
+      if (bush) { moveSmart(f, mode, bush.x, bush.y, now); return; }
     }
     if (!f._wanderPt || (f._wanderUntil && now > f._wanderUntil) || dist(f.x, f.y, f._wanderPt.x, f._wanderPt.y) < 50) {
       if (!f._wanderPt) {
@@ -122,36 +143,36 @@ function runObjectiveAI(f, mode, now, diff, hasEnemyNearby) {
         while (isSolid(mode.map, px, py) && tries < 10);
         f._wanderPt = { x: px, y: py };
       }
-      f._wanderUntil = now + 4;
+      f._wanderUntil = now + 6;
     }
-    setMoveToward(f, mode, f._wanderPt.x, f._wanderPt.y);
+    moveSmart(f, mode, f._wanderPt.x, f._wanderPt.y, now);
     return;
   }
   if (mode.id === "gemgrab") {
     if (f.hp / f.maxHp < 0.32 && !hasEnemyNearby) {
       const bush = findNearestBushTile(mode, f);
-      if (bush) { setMoveToward(f, mode, bush.x, bush.y); return; }
+      if (bush) { moveSmart(f, mode, bush.x, bush.y, now); return; }
     }
     if (f.carryingGems >= 3) {
       const home = f.team === "A" ? mode.map.spawnsA[0] : mode.map.spawnsB[0];
-      setMoveToward(f, mode, home.x, home.y);
+      moveSmart(f, mode, home.x, home.y, now);
       return;
     }
     const gem = findNearestGem(f, mode);
-    if (gem) { setMoveToward(f, mode, gem.x, gem.y); return; }
-    setMoveToward(f, mode, mode.map.gemMine.x, mode.map.gemMine.y);
+    if (gem) { moveSmart(f, mode, gem.x, gem.y, now); return; }
+    moveSmart(f, mode, mode.map.gemMine.x, mode.map.gemMine.y, now);
     return;
   }
   if (mode.id === "showdown") {
     const zd = dist(f.x, f.y, mode.zone.x, mode.zone.y);
-    if (zd > mode.zone.r - 30) { setMoveToward(f, mode, mode.zone.x, mode.zone.y); return; }
+    if (zd > mode.zone.r - 30) { moveSmart(f, mode, mode.zone.x, mode.zone.y, now); return; }
     if (f.hp / f.maxHp < 0.35 && !hasEnemyNearby) {
       const bush = findNearestBushTile(mode, f);
-      if (bush) { setMoveToward(f, mode, bush.x, bush.y); return; }
+      if (bush) { moveSmart(f, mode, bush.x, bush.y, now); return; }
     }
     const cube = mode.powerCubes.find(c => !c.taken);
-    if (cube && !hasEnemyNearby) { setMoveToward(f, mode, cube.x, cube.y); return; }
-    setMoveToward(f, mode, mode.zone.x + rand(-60, 60), mode.zone.y + rand(-60, 60));
+    if (cube && !hasEnemyNearby) { moveSmart(f, mode, cube.x, cube.y, now); return; }
+    moveSmart(f, mode, mode.zone.x + rand(-60, 60), mode.zone.y + rand(-60, 60), now);
     return;
   }
   if (mode.id === "brawlball") {
@@ -160,18 +181,18 @@ function runObjectiveAI(f, mode, now, diff, hasEnemyNearby) {
     const ownGoal = f.team === "A" ? mode.map.goalA : mode.map.goalB;
     if (ball.carrier === f) {
       const gx = enemyGoal.x + enemyGoal.w / 2, gy = enemyGoal.y + enemyGoal.h / 2;
-      setMoveToward(f, mode, gx, gy);
+      moveSmart(f, mode, gx, gy, now);
       f.aimAngle = Math.atan2(gy - f.y, gx - f.x);
       return;
     }
     if (ball.carrier && ball.carrier.team !== f.team) {
-      setMoveToward(f, mode, ball.carrier.x, ball.carrier.y);
+      moveSmart(f, mode, ball.carrier.x, ball.carrier.y, now);
       f.aimAngle = Math.atan2(ball.carrier.y - f.y, ball.carrier.x - f.x);
       return;
     }
-    if (!ball.carrier) { setMoveToward(f, mode, ball.x, ball.y); return; }
+    if (!ball.carrier) { moveSmart(f, mode, ball.x, ball.y, now); return; }
     const gx = ownGoal.x + ownGoal.w / 2, gy = ownGoal.y + ownGoal.h / 2;
-    setMoveToward(f, mode, lerp(gx, mode.map.ballSpawn.x, 0.5), gy + rand(-40, 40));
+    moveSmart(f, mode, lerp(gx, mode.map.ballSpawn.x, 0.5), gy + rand(-40, 40), now);
     return;
   }
   stopMove(f);

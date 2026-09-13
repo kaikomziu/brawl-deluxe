@@ -20,23 +20,40 @@ function isHiddenFromPlayer(mode, f, time) {
   return true;
 }
 
+// タイル座標から決定論的な0〜1の疑似乱数を作る(タイルごとの質感バリエーション用)
+function tileHash(a, b) {
+  const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return v - Math.floor(v);
+}
+
 function drawTile(ctx, tx, ty, ch, time) {
   const x = tx * TILE, y = ty * TILE;
   if (ch === "#") {
-    ctx.fillStyle = "#3a3d55";
+    const shade = tileHash(tx, ty) * 10 - 5; // タイルごとの明暗ばらつき
+    ctx.fillStyle = `hsl(234, 18%, ${22 + shade * 0.3}%)`;
     ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = "#4d5175";
+    const grad = ctx.createLinearGradient(x, y, x, y + TILE);
+    grad.addColorStop(0, `hsl(234, 22%, ${34 + shade * 0.3}%)`);
+    grad.addColorStop(1, `hsl(234, 20%, ${27 + shade * 0.3}%)`);
+    ctx.fillStyle = grad;
     ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 10);
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    ctx.fillRect(x + 3, y + 3, TILE - 6, 2);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.fillRect(x, y + TILE - 6, TILE, 6);
   } else if (ch === "w") {
     const shimmer = Math.sin(time * 2 + tx * 0.7 + ty * 0.5) * 8;
-    ctx.fillStyle = "#1c5f8a";
+    const grad = ctx.createLinearGradient(x, y, x, y + TILE);
+    grad.addColorStop(0, "#1f6a96"); grad.addColorStop(1, "#164c70");
+    ctx.fillStyle = grad;
     ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = `rgba(120,210,255,0.25)`;
-    ctx.fillRect(x, y + 18 + shimmer * 0.2, TILE, 6);
+    ctx.fillStyle = "rgba(140,220,255,0.22)";
+    ctx.fillRect(x, y + 18 + shimmer * 0.2, TILE, 5);
+    ctx.fillStyle = "rgba(140,220,255,0.12)";
+    ctx.fillRect(x, y + 28 - shimmer * 0.15, TILE, 3);
   } else if (ch === "b") {
-    ctx.fillStyle = "#274a2a";
+    const shade = tileHash(tx + 50, ty + 50) * 8;
+    ctx.fillStyle = `hsl(122, 30%, ${16 + shade * 0.2}%)`;
     ctx.fillRect(x, y, TILE, TILE);
   }
 }
@@ -46,23 +63,30 @@ function drawBushTop(ctx, tx, ty, time) {
   const sway = Math.sin(time * 1.6 + tx * 1.3 + ty) * 2;
   ctx.save();
   ctx.translate(x, y + sway);
-  ctx.fillStyle = "#3d7a3f";
+  ctx.fillStyle = "#2f5c31";
   for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
+    const a = (i / 5) * Math.PI * 2 + tileHash(tx, ty) * 0.6;
     ctx.beginPath();
     ctx.arc(Math.cos(a) * 11, Math.sin(a) * 11, 13, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = "#4f9950";
+  const grad = ctx.createRadialGradient(-5, -6, 2, 0, 0, 17);
+  grad.addColorStop(0, "#6bc06d"); grad.addColorStop(1, "#48923f");
+  ctx.fillStyle = grad;
   ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
 function drawMap(ctx, map, time) {
-  ctx.fillStyle = "#1b1d2b";
+  const bg = ctx.createRadialGradient(
+    MAP_W * TILE / 2, MAP_H * TILE / 2, 40,
+    MAP_W * TILE / 2, MAP_H * TILE / 2, MAP_W * TILE * 0.7
+  );
+  bg.addColorStop(0, "#23263a"); bg.addColorStop(1, "#15161f");
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, MAP_W * TILE, MAP_H * TILE);
   // floor grid
-  ctx.strokeStyle = "rgba(255,255,255,0.03)";
+  ctx.strokeStyle = "rgba(255,255,255,0.035)";
   for (let x = 0; x <= MAP_W; x++) { ctx.beginPath(); ctx.moveTo(x * TILE, 0); ctx.lineTo(x * TILE, MAP_H * TILE); ctx.stroke(); }
   for (let y = 0; y <= MAP_H; y++) { ctx.beginPath(); ctx.moveTo(0, y * TILE); ctx.lineTo(MAP_W * TILE, y * TILE); ctx.stroke(); }
   for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0; tx < MAP_W; tx++) {
@@ -175,12 +199,29 @@ function drawFighter(ctx, f, mode, time, isMe) {
   ctx.globalAlpha = alpha;
 
   const scale = 1 + f.hitFlash * 0.18;
-  ctx.translate(f.x, f.y);
+  const isMoving = Math.hypot(f.moveX, f.moveY) > 0.15 && Math.hypot(f.x - (f._lastDrawX ?? f.x), f.y - (f._lastDrawY ?? f.y)) > 0.05;
+  const bob = isMoving ? Math.abs(Math.sin(time * 11 + f.id)) * 2.4 : 0;
+  f._lastDrawX = f.x; f._lastDrawY = f.y;
 
-  // 影
-  ctx.globalAlpha = alpha * 0.35;
+  // ダッシュ中の残像トレイル
+  if (time < f.dashUntil && (f.dashVX || f.dashVY)) {
+    const dashAng = Math.atan2(f.dashVY, f.dashVX);
+    for (let i = 3; i >= 1; i--) {
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.12 * (4 - i);
+      ctx.translate(f.x - Math.cos(dashAng) * i * 12, f.y - Math.sin(dashAng) * i * 12);
+      ctx.beginPath(); ctx.arc(0, 0, f.radius * 0.85, 0, Math.PI * 2);
+      ctx.fillStyle = f.brawler.color; ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  ctx.translate(f.x, f.y - bob);
+
+  // 影(浮いている時は少し離れて小さく見えるように)
+  ctx.globalAlpha = alpha * (0.35 - bob * 0.03);
   ctx.fillStyle = "#000";
-  ctx.beginPath(); ctx.ellipse(0, f.radius * 0.8, f.radius * 0.9, f.radius * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, f.radius * 0.8 + bob, f.radius * (0.9 - bob * 0.03), f.radius * 0.35, 0, 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = alpha;
 
   // 必殺技ゲージリング
@@ -201,15 +242,21 @@ function drawFighter(ctx, f, mode, time, isMe) {
     ctx.restore();
   }
 
-  ctx.rotate(f.facing);
+  // 被弾時の「ポン」とした膨らみは本体+武器をまとめて一体で拡大する(武器だけ肥大化して見えないように)
   ctx.scale(scale, scale);
+  ctx.save();
+  ctx.rotate(f.facing);
   weaponShape(ctx, f.brawler.attack.kind);
-  ctx.rotate(-f.facing);
+  ctx.restore();
 
-  // 本体
+  // 本体(球体らしく見えるグラデーション)
   const teamRing = f.team === "A" ? "#5da8ff" : f.team === "B" ? "#ff5d5d" : (isMe ? "#ffd23f" : "#c9c9d8");
+  const bodyGrad = ctx.createRadialGradient(-f.radius * 0.35, -f.radius * 0.4, f.radius * 0.15, 0, 0, f.radius * 1.1);
+  bodyGrad.addColorStop(0, lightenColor(f.brawler.color, 0.35));
+  bodyGrad.addColorStop(0.6, f.brawler.color);
+  bodyGrad.addColorStop(1, f.brawler.colorDark);
   ctx.beginPath(); ctx.arc(0, 0, f.radius, 0, Math.PI * 2);
-  ctx.fillStyle = f.hitFlash > 0.4 ? "#ffffff" : f.brawler.color;
+  ctx.fillStyle = f.hitFlash > 0.4 ? "#ffffff" : bodyGrad;
   ctx.fill();
   ctx.lineWidth = isMe ? 4 : 3;
   ctx.strokeStyle = teamRing;
@@ -274,6 +321,23 @@ function drawLasers(ctx) {
     ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
     ctx.restore();
   }
+}
+
+// 自分のHPが低い時、画面端を赤く脈打たせて緊張感を出す(スクリーン座標で描画すること)
+function drawLowHpVignette(ctx, mode, time) {
+  const player = mode.fighters.find(f => f.isPlayer);
+  if (!player || !player.alive) return;
+  const ratio = player.hp / player.maxHp;
+  if (ratio >= 0.3) return;
+  const pulse = 0.35 + Math.sin(time * 6) * 0.15;
+  const intensity = (1 - ratio / 0.3) * pulse;
+  ctx.save();
+  const g = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.28, VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.72);
+  g.addColorStop(0, "rgba(180,0,0,0)");
+  g.addColorStop(1, `rgba(180,0,0,${clamp(intensity, 0, 0.55)})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.restore();
 }
 
 function drawWorld(ctx, mode, time) {
