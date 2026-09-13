@@ -6,7 +6,8 @@ function createFighter(brawlerId, team, x, y, opts = {}) {
   const brawler = getBrawler(brawlerId);
   return {
     id: nextId(), brawler, team,
-    isPlayer: !!opts.isPlayer, isBot: !opts.isPlayer,
+    // isBotを明示指定すると「人が操作するがローカルAIは動かさない」枠を作れる(オンライン対戦の相手側など)
+    isPlayer: !!opts.isPlayer, isBot: opts.isBot !== undefined ? !!opts.isBot : !opts.isPlayer,
     x, y, spawnX: x, spawnY: y, radius: brawler.radius,
     hp: brawler.hp, maxHp: brawler.hp,
     moveX: 0, moveY: 0, aimAngle: opts.aimAngle ?? 0, facing: 0,

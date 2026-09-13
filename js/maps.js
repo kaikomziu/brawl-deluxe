@@ -160,10 +160,43 @@ function buildSkyPitch() {
   };
 }
 
+function buildDuelArena() {
+  const g = emptyGrid();
+  border(g);
+  rectSym(g, 10, 6, 2, 2, "#");
+  rectSym(g, 10, 16, 2, 2, "#");
+  rectSym(g, 15, 3, 2, 2, "b");
+  rectSym(g, 15, 19, 2, 2, "b");
+  rectSym(g, 6, 11, 1, 2, "b");
+  rect(g, 17, 11, 2, 2, "#");
+  return {
+    id: "duelarena", name: "決闘の広場", mode: "duel", grid: g,
+    spawnsA: [tileCenter(4, 12)],
+    spawnsB: [tileCenter(31, 12)],
+  };
+}
+
+function buildDuelSpire() {
+  const g = emptyGrid();
+  border(g);
+  rectSym(g, 8, 5, 2, 3, "#");
+  rectSym(g, 8, 16, 2, 3, "#");
+  rectSym(g, 14, 10, 1, 1, "b");
+  rectSym(g, 20, 13, 1, 1, "b");
+  rect(g, 17, 6, 2, 1, "b");
+  rect(g, 17, 17, 2, 1, "b");
+  return {
+    id: "duelspire", name: "決闘の尖塔", mode: "duel", grid: g,
+    spawnsA: [tileCenter(4, 12)],
+    spawnsB: [tileCenter(31, 12)],
+  };
+}
+
 const MAPS = {
   gemgrab: [buildGemValley(), buildCrystalRuins()],
   showdown: [buildRuinsArena()],
   brawlball: [buildGoalLine(), buildSkyPitch()],
+  duel: [buildDuelArena(), buildDuelSpire()],
 };
 
 function pickMap(mode) { return choice(MAPS[mode]); }

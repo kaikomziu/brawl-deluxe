@@ -107,6 +107,26 @@ function runCombatObjective(f, mode, now, diff) {
 }
 
 function runObjectiveAI(f, mode, now, diff, hasEnemyNearby) {
+  if (mode.id === "duel") {
+    // 相手が見えていない間は、最初は相手のスポーン方面へ、それ以降はマップ内を巡回して捜す
+    if (f.hp / f.maxHp < 0.3 && !hasEnemyNearby) {
+      const bush = findNearestBushTile(mode, f);
+      if (bush) { setMoveToward(f, mode, bush.x, bush.y); return; }
+    }
+    if (!f._wanderPt || (f._wanderUntil && now > f._wanderUntil) || dist(f.x, f.y, f._wanderPt.x, f._wanderPt.y) < 50) {
+      if (!f._wanderPt) {
+        f._wanderPt = f.team === "A" ? mode.map.spawnsB[0] : mode.map.spawnsA[0];
+      } else {
+        let px, py, tries = 0;
+        do { px = rand(TILE * 2, MAP_W * TILE - TILE * 2); py = rand(TILE * 2, MAP_H * TILE - TILE * 2); tries++; }
+        while (isSolid(mode.map, px, py) && tries < 10);
+        f._wanderPt = { x: px, y: py };
+      }
+      f._wanderUntil = now + 4;
+    }
+    setMoveToward(f, mode, f._wanderPt.x, f._wanderPt.y);
+    return;
+  }
   if (mode.id === "gemgrab") {
     if (f.hp / f.maxHp < 0.32 && !hasEnemyNearby) {
       const bush = findNearestBushTile(mode, f);

@@ -1,5 +1,6 @@
 // ===== ゲームモード =====
 const MODE_INFO = {
+  duel: { name: "デュエル", icon: "🤺", desc: "1対1のガチンコ勝負。先に3キルしたほうが勝ち。友達とオンラインで対戦することもできる。", timeLimit: 180 },
   gemgrab: { name: "ジェムグラブ", icon: "💎", desc: "中央の鉱山からジェムを集め、10個以上持ったまま生き残れ。相手を倒すとジェムを落とさせられる。", timeLimit: 180 },
   showdown: { name: "ショーダウン", icon: "🏆", desc: "10人による一人用バトルロイヤル。安全地帯が縮み続ける中、最後まで生き残った1人が優勝。", timeLimit: 210 },
   brawlball: { name: "ブロールボール", icon: "⚽", desc: "3vs3のサッカー対決。ボールを相手ゴールに運べば1点。先に2点取ったチームの勝ち。", timeLimit: 180 },
@@ -17,6 +18,40 @@ function baseMode(id, map, difficulty) {
     state: "countdown", countdownT: 3.4, elapsed: 0,
     timeLimit: MODE_INFO[id].timeLimit, result: null,
   };
+}
+
+// ---------- デュエル(1vs1、オフラインはCPU戦・オンラインは1vs1対戦) ----------
+// opts.online = { role: "host" | "guest" } を渡すとオンライン対戦用のモードになる。
+// fighters[0]=ホスト側、fighters[1]=ゲスト側(オフラインはCPU)で常に固定し、
+// スナップショットのインデックスが両者でズレないようにする。
+function createDuelMode(brawlerIdHost, brawlerIdGuest, opts = {}) {
+  // オンライン対戦はホストとゲストが必ず同じマップになるよう、mapIdを明示指定できるようにする
+  const map = opts.mapId ? MAPS.duel.find(m => m.id === opts.mapId) : (opts.map || pickMap("duel"));
+  const mode = baseMode("duel", map, opts.difficulty || "normal");
+  mode.online = opts.online || null;
+  const role = opts.online ? opts.online.role : null;
+  const isOffline = !opts.online;
+  const p0 = createFighter(brawlerIdHost, "A", map.spawnsA[0].x, map.spawnsA[0].y, {
+    isPlayer: isOffline || role === "host", isBot: false,
+  });
+  const p1 = createFighter(brawlerIdGuest, "B", map.spawnsB[0].x, map.spawnsB[0].y, {
+    isPlayer: role === "guest", isBot: isOffline, difficulty: opts.difficulty,
+  });
+  mode.fighters.push(p0, p1);
+  mode.killTarget = 3;
+  mode.scoreA = 0; mode.scoreB = 0;
+  mode.onDeath = (target, attacker, now) => { target.respawnTimer = now + 3; };
+  return mode;
+}
+
+function tickDuel(mode, dt, now) {
+  mode.scoreA = mode.fighters[0].stats.eliminations;
+  mode.scoreB = mode.fighters[1].stats.eliminations;
+  if (mode.scoreA >= mode.killTarget) return finishMode(mode, "A", `${mode.killTarget}キル達成`);
+  if (mode.scoreB >= mode.killTarget) return finishMode(mode, "B", `${mode.killTarget}キル達成`);
+  if (mode.elapsed >= mode.timeLimit && mode.scoreA !== mode.scoreB) {
+    return finishMode(mode, mode.scoreA > mode.scoreB ? "A" : "B", "タイムアップ");
+  }
 }
 
 // ---------- ジェムグラブ ----------
@@ -242,4 +277,5 @@ function updateMode(mode, dt, now) {
   if (mode.id === "gemgrab") tickGemGrab(mode, dt, now);
   else if (mode.id === "showdown") tickShowdown(mode, dt, now);
   else if (mode.id === "brawlball") tickBrawlBall(mode, dt, now);
+  else if (mode.id === "duel") tickDuel(mode, dt, now);
 }

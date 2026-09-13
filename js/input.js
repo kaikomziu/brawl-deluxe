@@ -4,7 +4,7 @@ const Input = {
   superPressed: false, superQueued: false,
   touchMove: { active: false, dx: 0, dy: 0 },
   touchAim: { active: false, dx: 0, dy: 0 },
-  touchSuperQueued: false,
+  touchSuperQueued: false, touchSuperHeld: false,
   isTouch: false,
 };
 
@@ -36,7 +36,8 @@ function initInput(canvas) {
   setupJoystick(document.getElementById("joyAim"), document.getElementById("joyAimKnob"), Input.touchAim);
   const superBtn = document.getElementById("btnSuper");
   if (superBtn) {
-    superBtn.addEventListener("touchstart", (e) => { e.preventDefault(); Input.touchSuperQueued = true; }, { passive: false });
+    superBtn.addEventListener("touchstart", (e) => { e.preventDefault(); Input.touchSuperQueued = true; Input.touchSuperHeld = true; }, { passive: false });
+    superBtn.addEventListener("touchend", (e) => { e.preventDefault(); Input.touchSuperHeld = false; }, { passive: false });
     superBtn.addEventListener("click", () => { Input.touchSuperQueued = true; });
   }
 }
@@ -97,4 +98,29 @@ function readPlayerInput(player) {
   if (Input.superQueued) { wantSuper = true; Input.superQueued = false; }
   if (Input.touchSuperQueued) { wantSuper = true; Input.touchSuperQueued = false; }
   return { moveX: mx, moveY: my, aimAngle, firing, wantSuper };
+}
+
+// オンライン対戦のゲスト側用: 状態を消費せず「今の生の入力」を毎フレーム読む。
+// 必殺技は held(押しっぱなし)状態のまま送り、ホスト側でエッジ検出して1回だけ発動させる。
+function readRawInputForNetwork(myFighter) {
+  let mx = 0, my = 0;
+  if (Input.touchMove.active) { mx = Input.touchMove.dx; my = Input.touchMove.dy; }
+  else {
+    if (Input.keys["KeyW"] || Input.keys["ArrowUp"]) my -= 1;
+    if (Input.keys["KeyS"] || Input.keys["ArrowDown"]) my += 1;
+    if (Input.keys["KeyA"] || Input.keys["ArrowLeft"]) mx -= 1;
+    if (Input.keys["KeyD"] || Input.keys["ArrowRight"]) mx += 1;
+  }
+  let aimAngle = myFighter.aimAngle, firing = false;
+  if (Input.touchAim.active) {
+    aimAngle = Math.atan2(Input.touchAim.dy, Input.touchAim.dx);
+    firing = true;
+  } else {
+    const worldMouseX = Input.mouseX + Camera.x - VIEW_W / 2;
+    const worldMouseY = Input.mouseY + Camera.y - VIEW_H / 2;
+    aimAngle = Math.atan2(worldMouseY - myFighter.y, worldMouseX - myFighter.x);
+    firing = Input.mouseDown;
+  }
+  const superHeld = Input.superPressed || Input.touchSuperHeld;
+  return { moveX: mx, moveY: my, aimAngle, firing, superHeld };
 }

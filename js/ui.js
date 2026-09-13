@@ -10,11 +10,15 @@ function cacheUI() {
     "hudAmmoPips", "hudSuperFill", "hudSuperLabel", "countdownOverlay", "countdownText",
     "respawnOverlay", "respawnText", "resultTitle", "resultReason", "resultTrophy", "resultStats",
     "totalTrophies", "volumeSlider", "muteToggle", "btnStartMatch", "goalScoreLine",
+    "btnOnlineDuel", "screenOnlineMenu", "screenOnlineLobby", "onlineMenuError", "joinCodeInput",
+    "onlineRoomCode", "onlineMeRole", "onlineMeBrawler", "onlineOppCard", "onlineOppBrawler",
+    "onlineStatus", "btnOnlineStart", "onlineWaitingHost", "onlineDisconnectOverlay", "onlineDisconnectMsg",
   ].forEach(id => (UI[id] = $(id)));
 }
 
 function showScreen(id) {
-  ["screenTitle", "screenBrawlerSelect", "screenModeSelect", "screenSettings", "screenHowTo", "screenResults", "hud"]
+  ["screenTitle", "screenBrawlerSelect", "screenModeSelect", "screenSettings", "screenHowTo", "screenResults", "hud",
+    "screenOnlineMenu", "screenOnlineLobby"]
     .forEach(s => UI[s] && UI[s].classList.add("hidden"));
   if (UI[id]) UI[id].classList.remove("hidden");
 }
@@ -70,6 +74,7 @@ function renderModeSelect() {
       document.querySelectorAll(".modeCard").forEach(c => c.classList.remove("selected"));
       card.classList.add("selected");
       UI.btnStartMatch.disabled = false;
+      UI.btnOnlineDuel.classList.toggle("hidden", id !== "duel");
     });
     UI.modeGrid.appendChild(card);
   });
@@ -87,6 +92,7 @@ function renderModeSelect() {
     UI.diffGrid.appendChild(btn);
   });
   UI.btnStartMatch.disabled = !Game.selectedMode;
+  UI.btnOnlineDuel.classList.toggle("hidden", Game.selectedMode !== "duel");
 }
 
 function fillAmmoPips(f) {
@@ -108,6 +114,11 @@ function updateHUD(mode, now) {
   } else if (mode.id === "showdown") {
     const alive = mode.fighters.filter(f => f.alive).length;
     UI.hudTop.innerHTML = `🏆 残り ${alive} 人`;
+  } else if (mode.id === "duel") {
+    const myTeam = player ? player.team : "A";
+    const myScore = myTeam === "A" ? mode.scoreA : mode.scoreB;
+    const oppScore = myTeam === "A" ? mode.scoreB : mode.scoreA;
+    UI.hudTop.innerHTML = `🤺 自分 ${myScore} - ${oppScore} 相手 (先取${mode.killTarget})`;
   }
   if (player) {
     UI.hudPlayerIcon.textContent = player.brawler.icon;
@@ -161,7 +172,13 @@ function showResults(mode) {
   const won = mode.id === "showdown" ? r.placement === 1 : r.playerWon;
   UI.resultTitle.textContent = won ? "🎉 WIN!" : (mode.id === "showdown" ? placementLabel(r.placement) : "😢 LOSE...");
   UI.resultTitle.className = won ? "win" : "lose";
-  UI.resultReason.textContent = r.reason + (mode.id === "showdown" ? "" : (r.winTeam ? `(${r.winTeam === "A" ? "🔵 味方チーム" : "🔴 敵チーム"}の勝利)` : ""));
+  let sideLabel = "";
+  if (r.winTeam && (mode.id === "gemgrab" || mode.id === "brawlball")) {
+    sideLabel = `(${r.winTeam === player.team ? "🔵 味方チーム" : "🔴 敵チーム"}の勝利)`;
+  } else if (r.winTeam && mode.id === "duel") {
+    sideLabel = `(${r.playerWon ? "自分" : "相手"}の勝利)`;
+  }
+  UI.resultReason.textContent = r.reason + sideLabel;
   UI.resultTrophy.innerHTML = `🏆 ${delta >= 0 ? "+" : ""}${delta}`;
   UI.resultTrophy.className = delta >= 0 ? "gain" : "loss";
   UI.resultStats.innerHTML = `<div>与ダメージ ${Math.round(player.stats.damageDealt)}</div><div>撃破数 ${player.stats.eliminations}</div>` +

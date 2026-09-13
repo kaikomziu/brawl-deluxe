@@ -42,6 +42,47 @@
   <h3 class="diffTitle">CPUの強さ</h3>
   <div id="diffGrid" class="diffGrid"></div>
   <button id="btnStartMatch" class="bigBtn bottomBtn" disabled>⚔ 対戦開始</button>
+  <button id="btnOnlineDuel" class="smallBtn onlineDuelBtn hidden">🌐 オンラインで1vs1</button>
+</div>
+
+<div id="screenOnlineMenu" class="screen hidden">
+  <div class="headerBar"><button id="btnOnlineMenuBack" class="backBtn">←</button><h2>🌐 オンライン対戦</h2></div>
+  <p class="onlineHint">1対1のデュエルを、遠くの人とインターネット越しに遊べます。片方が「ルームを作る」、もう片方がその5桁コードで「ルームに入る」だけ。</p>
+  <div class="onlineMenuGrid">
+    <div class="onlineMenuCard">
+      <div class="omcIcon">🏠</div>
+      <h3>ルームを作る</h3>
+      <p>5桁コードが発行されます。相手にコードを伝えてね。</p>
+      <button id="btnOnlineCreate" class="bigBtn">ルームを作る</button>
+    </div>
+    <div class="onlineMenuCard">
+      <div class="omcIcon">🔑</div>
+      <h3>ルームに入る</h3>
+      <p>相手から聞いた5桁コードを入力して参加します。</p>
+      <input id="joinCodeInput" class="codeInput" maxlength="5" placeholder="ABCDE" autocomplete="off" autocapitalize="characters">
+      <button id="btnOnlineJoin" class="bigBtn">ルームに入る</button>
+    </div>
+  </div>
+  <p id="onlineMenuError" class="onlineError"></p>
+</div>
+
+<div id="screenOnlineLobby" class="screen hidden">
+  <div class="headerBar"><button id="btnOnlineLobbyLeave" class="backBtn">←</button><h2>オンライン対戦ロビー</h2></div>
+  <div class="onlineRoomCodeWrap">ルームコード <b id="onlineRoomCode">-----</b></div>
+  <p id="onlineStatus" class="onlineStatus">接続中…</p>
+  <div class="onlinePlayers">
+    <div class="onlinePlayerCard active">
+      <div class="opcLabel">自分 <span id="onlineMeRole"></span></div>
+      <div id="onlineMeBrawler" class="opcBrawler"></div>
+    </div>
+    <div class="opcVs">VS</div>
+    <div id="onlineOppCard" class="onlinePlayerCard">
+      <div class="opcLabel">相手</div>
+      <div id="onlineOppBrawler" class="opcBrawler"><span class="obIcon">?</span><span>未接続</span></div>
+    </div>
+  </div>
+  <button id="btnOnlineStart" class="bigBtn" disabled>⚔ 対戦開始</button>
+  <p id="onlineWaitingHost" class="onlineHint">ホストが対戦を開始するのを待っています…</p>
 </div>
 
 <div id="screenSettings" class="screen hidden">
@@ -58,6 +99,8 @@
     <h3>🎮 操作方法</h3>
     <p><b>PC:</b> WASD/矢印キーで移動、マウスで狙う、左クリック(長押しで連射)で攻撃、右クリックまたはSpaceで必殺技。</p>
     <p><b>スマホ:</b> 左スティックで移動、右スティックを倒すとその方向へ攻撃、💥ボタンで必殺技。</p>
+    <h3>🤺 デュエル</h3>
+    <p>1対1のガチンコ勝負。先に3キルしたほうが勝ち。モード選択画面で「🌐 オンラインで1vs1」を押すと、友達と5桁のルームコードでインターネット越しに対戦できる(片方が「ルームを作る」、もう片方がそのコードで「ルームに入る」)。</p>
     <h3>💎 ジェムグラブ</h3>
     <p>中央のジェム鉱山からジェムが湧く。拾って10個以上チームで持ったまま15秒耐えれば勝利。倒されると持っているジェムを落とす。</p>
     <h3>🏆 ショーダウン</h3>
@@ -104,6 +147,14 @@
       <button id="btnQuit" class="smallBtn">🏠 メニューに戻る</button>
     </div>
   </div>
+
+  <div id="onlineDisconnectOverlay" class="pauseModal hidden">
+    <div class="pauseBox">
+      <h2>🔌 接続が切れました</h2>
+      <p id="onlineDisconnectMsg" class="onlineHint"></p>
+      <button id="btnOnlineDisconnectOk" class="bigBtn">🏠 メニューに戻る</button>
+    </div>
+  </div>
 </div>
 
 <div id="screenResults" class="screen hidden">
@@ -117,19 +168,22 @@
   </div>
 </div>
 
-<script src="js/version.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/characters.js"></script>
-<script src="js/maps.js"></script>
-<script src="js/particles.js"></script>
-<script src="js/entities.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/modes.js"></script>
-<script src="js/draw.js"></script>
-<script src="js/input.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
-<script src="js/main.js"></script>
+<script src="js/version.js?v=1.3.0"></script>
+<script src="js/utils.js?v=1.3.0"></script>
+<script src="js/audio.js?v=1.3.0"></script>
+<script src="js/characters.js?v=1.3.0"></script>
+<script src="js/maps.js?v=1.3.0"></script>
+<script src="js/particles.js?v=1.3.0"></script>
+<script src="js/entities.js?v=1.3.0"></script>
+<script src="js/ai.js?v=1.3.0"></script>
+<script src="js/modes.js?v=1.3.0"></script>
+<script src="js/draw.js?v=1.3.0"></script>
+<script src="js/input.js?v=1.3.0"></script>
+<script src="js/ui.js?v=1.3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/online.js?v=1.3.0"></script>
+<script src="js/online-ui.js?v=1.3.0"></script>
+<script src="js/game.js?v=1.3.0"></script>
+<script src="js/main.js?v=1.3.0"></script>
 </body>
 </html>

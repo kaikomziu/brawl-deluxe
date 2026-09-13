@@ -69,11 +69,38 @@ function wireButtons() {
   $("btnPause").addEventListener("click", () => togglePause(true));
   $("btnResume").addEventListener("click", () => togglePause(false));
   $("btnPauseSettings").addEventListener("click", () => { showScreen("screenSettings"); UI.pauseModal.classList.add("hidden"); });
-  $("btnQuit").addEventListener("click", () => { Game.paused = false; UI.pauseModal.classList.add("hidden"); showScreen("screenTitle"); });
+  $("btnQuit").addEventListener("click", () => {
+    Game.paused = false; UI.pauseModal.classList.add("hidden");
+    if (ONLINE.session) { ONLINE.session.leave(); ONLINE.session = null; }
+    Game.mode = null;
+    showScreen("screenTitle");
+  });
   window.addEventListener("keydown", (e) => { if (e.code === "Escape" && Game.mode && Game.mode.state === "playing") togglePause(!Game.paused); });
 
-  $("btnRematch").addEventListener("click", () => { SFX.click(); startMatch(); });
-  $("btnResultsMenu").addEventListener("click", () => { SFX.click(); showScreen("screenTitle"); });
+  $("btnRematch").addEventListener("click", () => {
+    SFX.click();
+    if (Game.mode && Game.mode.online) {
+      // オンライン対戦は同じ組み合わせで即再戦できないので、いったんロビー選択に戻す
+      if (ONLINE.session) { ONLINE.session.leave(); ONLINE.session = null; }
+      Game.mode = null;
+      UI.onlineDisconnectOverlay.classList.add("hidden");
+      renderBrawlerSelect(); showScreen("screenBrawlerSelect");
+    } else startMatch();
+  });
+  $("btnResultsMenu").addEventListener("click", () => {
+    SFX.click();
+    if (ONLINE.session) { ONLINE.session.leave(); ONLINE.session = null; }
+    showScreen("screenTitle");
+  });
+
+  // ---- オンライン対戦 ----
+  UI.btnOnlineDuel.addEventListener("click", () => { SFX.ensure(); SFX.click(); openOnlineMenu(); });
+  $("btnOnlineCreate").addEventListener("click", () => { SFX.click(); onlineCreateRoom(); });
+  $("btnOnlineJoin").addEventListener("click", () => { SFX.click(); onlineJoinRoom(); });
+  $("btnOnlineMenuBack").addEventListener("click", () => { SFX.click(); showScreen("screenModeSelect"); });
+  $("btnOnlineLobbyLeave").addEventListener("click", () => { SFX.click(); onlineLeaveLobby(); });
+  UI.btnOnlineStart.addEventListener("click", () => { SFX.click(); onlineStartBattle(); });
+  $("btnOnlineDisconnectOk").addEventListener("click", () => { SFX.click(); onlineDisconnectBackToMenu(); });
 }
 
 function togglePause(p) {
@@ -86,7 +113,28 @@ function startMatch() {
   let mode;
   if (Game.selectedMode === "gemgrab") mode = createGemGrabMode(Game.selectedBrawler, Game.difficulty);
   else if (Game.selectedMode === "showdown") mode = createShowdownMode(Game.selectedBrawler, Game.difficulty);
-  else mode = createBrawlBallMode(Game.selectedBrawler, Game.difficulty);
+  else if (Game.selectedMode === "brawlball") mode = createBrawlBallMode(Game.selectedBrawler, Game.difficulty);
+  else mode = createDuelMode(Game.selectedBrawler, pickBotBrawlers(Game.selectedBrawler, 1)[0], { difficulty: Game.difficulty });
+  beginLocalMatch(mode);
+}
+
+// オンライン対戦(デュエル)を開始する。role: "host" | "guest"
+function startDuelOnlineMatch(role, hostBrawlerId, guestBrawlerId, session, mapId) {
+  SFX.ensure();
+  const mode = createDuelMode(hostBrawlerId, guestBrawlerId, { online: { role, session }, mapId });
+  beginLocalMatch(mode);
+  if (role === "guest") {
+    session.startInputStream(() => readRawInputForNetwork(mode.fighters.find(f => f.isPlayer)));
+  }
+  session.on("snapshot", (data) => { if (Game.mode === mode) applyDuelSnapshot(mode, data); });
+  session.on("peerLeft", () => {
+    if (Game.mode === mode && mode.state !== "ended") {
+      showOnlineDisconnect(role === "host" ? "相手が退出しました。" : "ホストとの接続が切れました。");
+    }
+  });
+}
+
+function beginLocalMatch(mode) {
   Game.mode = mode;
   Game.paused = false; Game.resultShown = false; Game.endTimer = 0;
   particles = []; damagePopups = []; laserBeams = []; screenShake = 0; hitStop = 0;
@@ -95,15 +143,27 @@ function startMatch() {
   showScreen("hud");
 }
 
+function maybeSendDuelSnapshot(mode) {
+  mode._snapTick = (mode._snapTick || 0) + 1;
+  if (mode._snapTick % SNAPSHOT_EVERY_N_TICKS !== 0) return;
+  mode.online.session.send("snapshot", buildDuelSnapshot(mode));
+}
+
 function loop(ts) {
   requestAnimationFrame(loop);
   const now = ts / 1000;
   let dt = Math.min(0.033, (ts - (Game.lastTime || ts)) / 1000);
   Game.lastTime = ts;
   updateParticles(dt);
-  if (Game.mode && !Game.paused) {
-    if (hitStop <= 0) {
-      const mode = Game.mode;
+  const mode = Game.mode;
+  if (mode && !Game.paused) {
+    const isGuest = mode.online && mode.online.role === "guest";
+    if (isGuest) {
+      // ゲスト側は物理演算をしない。状態はホストからのスナップショットで書き換わる。
+      updateCamera(mode.fighters.find(f => f.isPlayer));
+      updateHUD(mode, now);
+      checkMatchEnd(mode, dt);
+    } else if (hitStop <= 0) {
       const player = mode.fighters.find(f => f.isPlayer);
       updateCamera(player);
       if (player && mode.state === "playing" && player.alive) {
@@ -112,15 +172,29 @@ function loop(ts) {
         if (inp.firing) tryFire(player, mode, now);
         if (inp.wantSuper) fireSuper(player, mode, now);
       } else if (player) { player.moveX = 0; player.moveY = 0; }
+      if (mode.online && mode.online.role === "host") {
+        const opp = mode.fighters[1];
+        const remote = mode.online.session.remoteInput.read();
+        if (opp.alive && mode.state === "playing") {
+          opp.moveX = remote.moveX; opp.moveY = remote.moveY; opp.aimAngle = remote.aimAngle;
+          if (remote.firing) tryFire(opp, mode, now);
+          if (remote.wantSuper) fireSuper(opp, mode, now);
+        } else { opp.moveX = 0; opp.moveY = 0; }
+      }
       updateMode(mode, dt, now);
       updateHUD(mode, now);
-      if (mode.state === "ended" && !Game.resultShown) {
-        Game.endTimer += dt;
-        if (Game.endTimer > 1.4) { Game.resultShown = true; showResults(mode); }
-      }
+      if (mode.online && mode.online.role === "host") maybeSendDuelSnapshot(mode);
+      checkMatchEnd(mode, dt);
     }
   }
   render(now);
+}
+
+function checkMatchEnd(mode, dt) {
+  if (mode.state === "ended" && !Game.resultShown) {
+    Game.endTimer += dt;
+    if (Game.endTimer > 1.4) { Game.resultShown = true; showResults(mode); }
+  }
 }
 
 function render(now) {
