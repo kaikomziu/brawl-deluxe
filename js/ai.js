@@ -14,11 +14,18 @@ function isVisibleTo(map, vx, vy, tx, ty, targetInBush) {
   return clearLineOfSight(map, vx, vy, tx, ty);
 }
 
-function findNearestEnemy(f, mode, maxRange, now) {
-  let best = null, bestD = maxRange || 1e9;
+// CPUの索敵範囲はプレイヤーの画面と同じ「自分の周り(VIEW_W x VIEW_H)」だけ。
+// マップ全体を見渡せる索敵はしない=画面外の相手は見えない/狙えない。
+function inVisionRange(vx, vy, tx, ty) {
+  return Math.abs(tx - vx) <= VIEW_W / 2 && Math.abs(ty - vy) <= VIEW_H / 2;
+}
+
+function findNearestEnemy(f, mode, now) {
+  let best = null, bestD = 1e9;
   for (const t of mode.fighters) {
     if (!t.alive || t.team === f.team) continue;
     if (now != null && now < t.stealthUntil) continue; // ゴースト必殺技中は狙えない
+    if (!inVisionRange(f.x, f.y, t.x, t.y)) continue; // 画面外(索敵範囲外)
     const d = dist(f.x, f.y, t.x, t.y);
     if (d > bestD) continue;
     const tBush = isBush(mode.map, t.x, t.y);
@@ -55,7 +62,7 @@ function updateBotAI(f, mode, now, dt) {
   f._aiThink = (f._aiThink || 0) - dt;
   if (f._aiThink === undefined || f._aiThink <= 0) f._aiThink = diff.reaction;
 
-  const enemy = findNearestEnemy(f, mode, f.brawler.attack.range * 2.4, now);
+  const enemy = findNearestEnemy(f, mode, now);
   const atk = f.brawler.attack;
   const preferredRange = atk.range * (atk.kind === "shotgun" ? 0.45 : 0.72);
 

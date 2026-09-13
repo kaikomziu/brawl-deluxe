@@ -3,6 +3,9 @@
 const TILE = 40;
 const MAP_W = 24;
 const MAP_H = 16;
+// カメラ(画面に映る範囲)のワールド座標サイズ。マップ全体ではなく自分の周囲だけを表示する。
+const VIEW_W = 480;
+const VIEW_H = 320;
 
 function emptyGrid(fill = ".") {
   const g = [];

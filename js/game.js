@@ -4,6 +4,14 @@ const Game = {
   mode: null, selectedBrawler: null, selectedMode: null, difficulty: "normal",
   save: null, paused: false, lastTime: 0, resultShown: false, endTimer: 0,
 };
+// カメラ: プレイヤーを中心に追従するワールド座標。画面には自分の周囲(VIEW_W x VIEW_H)だけが映る。
+const Camera = { x: (MAP_W * TILE) / 2, y: (MAP_H * TILE) / 2 };
+
+function updateCamera(player) {
+  if (!player) return;
+  Camera.x = clamp(player.x, VIEW_W / 2, MAP_W * TILE - VIEW_W / 2);
+  Camera.y = clamp(player.y, VIEW_H / 2, MAP_H * TILE - VIEW_H / 2);
+}
 
 function defaultSave() {
   return { trophiesTotal: 0, brawlerTrophies: {}, matchesPlayed: 0, settings: { volume: 0.6, muted: false } };
@@ -12,7 +20,7 @@ function defaultSave() {
 function fitCanvas() {
   const c = Game.canvas;
   if (!c) return;
-  const ratio = (MAP_W * TILE) / (MAP_H * TILE);
+  const ratio = VIEW_W / VIEW_H;
   let w = window.innerWidth, h = w / ratio;
   if (h > window.innerHeight) { h = window.innerHeight; w = h * ratio; }
   c.style.width = w + "px"; c.style.height = h + "px";
@@ -20,7 +28,7 @@ function fitCanvas() {
 
 function initGame() {
   Game.canvas = $("gameCanvas");
-  Game.canvas.width = MAP_W * TILE; Game.canvas.height = MAP_H * TILE;
+  Game.canvas.width = VIEW_W; Game.canvas.height = VIEW_H;
   Game.ctx = Game.canvas.getContext("2d");
   Game.save = loadSave() || defaultSave();
   if (!Game.save.settings) Game.save.settings = { volume: 0.6, muted: false };
@@ -82,6 +90,7 @@ function startMatch() {
   Game.mode = mode;
   Game.paused = false; Game.resultShown = false; Game.endTimer = 0;
   particles = []; damagePopups = []; laserBeams = []; screenShake = 0; hitStop = 0;
+  updateCamera(mode.fighters.find(f => f.isPlayer));
   UI.hudSuperFill.closest(".superBox").classList.remove("ready");
   showScreen("hud");
 }
@@ -96,6 +105,7 @@ function loop(ts) {
     if (hitStop <= 0) {
       const mode = Game.mode;
       const player = mode.fighters.find(f => f.isPlayer);
+      updateCamera(player);
       if (player && mode.state === "playing" && player.alive) {
         const inp = readPlayerInput(player);
         player.moveX = inp.moveX; player.moveY = inp.moveY; player.aimAngle = inp.aimAngle;
@@ -118,6 +128,7 @@ function render(now) {
   ctx.save();
   ctx.clearRect(0, 0, Game.canvas.width, Game.canvas.height);
   if (screenShake > 0) ctx.translate(rand(-screenShake, screenShake), rand(-screenShake, screenShake));
+  ctx.translate(VIEW_W / 2 - Camera.x, VIEW_H / 2 - Camera.y);
   if (Game.mode) drawWorld(ctx, Game.mode, now);
   ctx.restore();
 }

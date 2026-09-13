@@ -87,7 +87,10 @@ function readPlayerInput(player) {
     aimAngle = Math.atan2(Input.touchAim.dy, Input.touchAim.dx);
     firing = true;
   } else {
-    aimAngle = Math.atan2(Input.mouseY - player.y, Input.mouseX - player.x);
+    // マウス座標はカメラ基準(画面内)なので、カメラのオフセット分を足してワールド座標に変換する
+    const worldMouseX = Input.mouseX + Camera.x - VIEW_W / 2;
+    const worldMouseY = Input.mouseY + Camera.y - VIEW_H / 2;
+    aimAngle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
     firing = Input.mouseDown;
   }
   let wantSuper = false;
