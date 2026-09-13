@@ -1,8 +1,8 @@
 // ===== マップ定義 =====
 // グリッドベース。'#'=壁(移動・弾を防ぐ) 'b'=茂み(隠れられる、移動は可) 'w'=水(移動不可・弾は通る)
 const TILE = 40;
-const MAP_W = 24;
-const MAP_H = 16;
+const MAP_W = 36;
+const MAP_H = 24;
 // カメラ(画面に映る範囲)のワールド座標サイズ。マップ全体ではなく自分の周囲だけを表示する。
 const VIEW_W = 480;
 const VIEW_H = 320;
@@ -32,126 +32,131 @@ function tileCenter(tx, ty) { return { x: tx * TILE + TILE / 2, y: ty * TILE + T
 function buildGemValley() {
   const g = emptyGrid();
   border(g);
-  // 左右対称の障害物
-  rectSym(g, 2, 2, 2, 2, "#");
-  rectSym(g, 2, 12, 2, 2, "#");
-  rectSym(g, 5, 6, 1, 4, "#");
-  rectSym(g, 8, 1, 2, 2, "b");
-  rectSym(g, 8, 13, 2, 2, "b");
-  rectSym(g, 4, 4, 3, 1, "b");
-  rectSym(g, 4, 11, 3, 1, "b");
-  rectSym(g, 9, 7, 1, 2, "#");
-  // 中央ジェム鉱山まわり
-  rect(g, 10, 6, 4, 1, "b");
-  rect(g, 10, 9, 4, 1, "b");
-  rect(g, 11, 3, 2, 1, "#");
-  rect(g, 11, 12, 2, 1, "#");
+  // 左右対称の障害物。通路はどこも2マス以上あけて、詰まらないようにする
+  rectSym(g, 7, 5, 3, 3, "#");
+  rectSym(g, 7, 16, 3, 3, "#");
+  rectSym(g, 13, 3, 2, 2, "b");
+  rectSym(g, 13, 19, 2, 2, "b");
+  rectSym(g, 4, 10, 2, 1, "b");
+  rectSym(g, 4, 13, 2, 1, "b");
+  rectSym(g, 9, 9, 1, 6, "#");
+  // 中央ジェム鉱山まわり(視界は塞がないよう茂みは隅だけ)
+  rect(g, 16, 10, 1, 1, "b");
+  rect(g, 19, 10, 1, 1, "b");
+  rect(g, 16, 13, 1, 1, "b");
+  rect(g, 19, 13, 1, 1, "b");
+  rect(g, 17, 8, 2, 1, "#");
+  rect(g, 17, 15, 2, 1, "#");
   return {
     id: "gemvalley", name: "ジェムの谷", mode: "gemgrab", grid: g,
-    spawnsA: [tileCenter(2, 6), tileCenter(2, 8), tileCenter(2, 10)],
-    spawnsB: [tileCenter(21, 6), tileCenter(21, 8), tileCenter(21, 10)],
-    gemMine: tileCenter(12, 8),
+    spawnsA: [tileCenter(3, 9), tileCenter(3, 12), tileCenter(3, 15)],
+    spawnsB: [tileCenter(32, 9), tileCenter(32, 12), tileCenter(32, 15)],
+    gemMine: tileCenter(18, 12),
   };
 }
 
 function buildCrystalRuins() {
   const g = emptyGrid();
   border(g);
-  rectSym(g, 3, 3, 3, 1, "#");
-  rectSym(g, 3, 12, 3, 1, "#");
-  rectSym(g, 6, 6, 1, 1, "b");
-  rectSym(g, 6, 9, 1, 1, "b");
-  rectSym(g, 2, 7, 2, 2, "b");
-  rectSym(g, 9, 2, 1, 3, "#");
-  rectSym(g, 9, 11, 1, 3, "#");
-  rect(g, 10, 7, 4, 2, "b");
-  rect(g, 11, 5, 2, 1, "#");
-  rect(g, 11, 10, 2, 1, "#");
+  rectSym(g, 4, 4, 4, 1, "#");
+  rectSym(g, 4, 19, 4, 1, "#");
+  rectSym(g, 3, 11, 2, 2, "b");
+  rectSym(g, 13, 3, 1, 4, "#");
+  rectSym(g, 13, 17, 1, 4, "#");
+  rectSym(g, 9, 8, 1, 1, "b");
+  rectSym(g, 9, 15, 1, 1, "b");
+  rect(g, 16, 9, 1, 1, "b");
+  rect(g, 19, 9, 1, 1, "b");
+  rect(g, 16, 14, 1, 1, "b");
+  rect(g, 19, 14, 1, 1, "b");
+  rect(g, 17, 7, 2, 1, "#");
+  rect(g, 17, 16, 2, 1, "#");
   return {
     id: "crystalruins", name: "水晶廃墟", mode: "gemgrab", grid: g,
-    spawnsA: [tileCenter(2, 5), tileCenter(2, 8), tileCenter(2, 11)],
-    spawnsB: [tileCenter(21, 5), tileCenter(21, 8), tileCenter(21, 11)],
-    gemMine: tileCenter(12, 8),
+    spawnsA: [tileCenter(3, 7), tileCenter(3, 12), tileCenter(3, 17)],
+    spawnsB: [tileCenter(32, 7), tileCenter(32, 12), tileCenter(32, 17)],
+    gemMine: tileCenter(18, 12),
   };
 }
 
 function buildRuinsArena() {
   const g = emptyGrid();
   border(g);
-  rect(g, 4, 3, 2, 2, "#");
-  rect(g, 18, 3, 2, 2, "#");
-  rect(g, 4, 11, 2, 2, "#");
-  rect(g, 18, 11, 2, 2, "#");
-  rect(g, 11, 1, 2, 2, "b");
-  rect(g, 11, 13, 2, 2, "b");
-  rect(g, 1, 7, 2, 2, "b");
-  rect(g, 21, 7, 2, 2, "b");
-  rect(g, 8, 7, 1, 3, "#");
-  rect(g, 15, 6, 1, 3, "#");
-  rect(g, 11, 7, 2, 2, "b");
-  rect(g, 6, 5, 2, 1, "b");
-  rect(g, 16, 10, 2, 1, "b");
-  rect(g, 3, 2, 1, 1, "w");
-  rect(g, 20, 13, 1, 1, "w");
+  rect(g, 7, 5, 2, 2, "#");
+  rect(g, 27, 5, 2, 2, "#");
+  rect(g, 7, 17, 2, 2, "#");
+  rect(g, 27, 17, 2, 2, "#");
+  rect(g, 17, 2, 2, 2, "b");
+  rect(g, 17, 20, 2, 2, "b");
+  rect(g, 2, 11, 2, 2, "b");
+  rect(g, 32, 11, 2, 2, "b");
+  rect(g, 12, 11, 1, 3, "#");
+  rect(g, 23, 10, 1, 3, "#");
+  rect(g, 16, 10, 1, 1, "b");
+  rect(g, 19, 10, 1, 1, "b");
+  rect(g, 16, 13, 1, 1, "b");
+  rect(g, 19, 13, 1, 1, "b");
+  rect(g, 9, 8, 2, 1, "b");
+  rect(g, 25, 15, 2, 1, "b");
+  rect(g, 5, 3, 1, 1, "w");
+  rect(g, 30, 20, 1, 1, "w");
   const spawns = [];
   const cx = MAP_W / 2, cy = MAP_H / 2;
-  const R = 8.5;
+  const R = 14;
   for (let i = 0; i < 10; i++) {
     const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
-    spawns.push({ x: cx * TILE + Math.cos(a) * R * TILE, y: cy * TILE + Math.sin(a) * R * TILE * 0.62 });
+    spawns.push({ x: cx * TILE + Math.cos(a) * R * TILE, y: cy * TILE + Math.sin(a) * R * TILE * (MAP_H / MAP_W) });
   }
   return {
     id: "ruinsarena", name: "廃墟アリーナ", mode: "showdown", grid: g,
     showdownSpawns: spawns,
     zoneCenter: { x: cx * TILE, y: cy * TILE },
-    zoneStartR: 480, zoneEndR: 60,
-    cubeSpots: [tileCenter(6, 4), tileCenter(17, 4), tileCenter(6, 12), tileCenter(17, 12), tileCenter(12, 8)],
+    zoneStartR: 620, zoneEndR: 80,
+    cubeSpots: [tileCenter(10, 6), tileCenter(26, 6), tileCenter(10, 18), tileCenter(26, 18), tileCenter(18, 12)],
   };
 }
 
 function buildGoalLine() {
   const g = emptyGrid();
   border(g);
-  rectSym(g, 3, 4, 1, 2, "#");
-  rectSym(g, 3, 10, 1, 2, "#");
-  rectSym(g, 7, 1, 2, 1, "b");
-  rectSym(g, 7, 14, 2, 1, "b");
-  rectSym(g, 9, 6, 1, 4, "#");
-  rect(g, 11, 4, 2, 1, "b");
-  rect(g, 11, 11, 2, 1, "b");
+  rectSym(g, 6, 7, 1, 3, "#");
+  rectSym(g, 6, 14, 1, 3, "#");
+  rectSym(g, 13, 2, 2, 2, "b");
+  rectSym(g, 13, 20, 2, 2, "b");
+  rectSym(g, 16, 10, 1, 4, "#");
   // ゴール口(壁の切れ目)
-  rect(g, 0, 6, 1, 4, ".");
-  rect(g, MAP_W - 1, 6, 1, 4, ".");
+  rect(g, 0, 9, 1, 6, ".");
+  rect(g, MAP_W - 1, 9, 1, 6, ".");
   return {
     id: "goalline", name: "ゴールライン", mode: "brawlball", grid: g,
-    spawnsA: [tileCenter(4, 6), tileCenter(4, 8), tileCenter(4, 10)],
-    spawnsB: [tileCenter(19, 6), tileCenter(19, 8), tileCenter(19, 10)],
-    ballSpawn: tileCenter(12, 8),
-    goalA: { x: 0, y: 6 * TILE, w: TILE, h: 4 * TILE }, // 味方Aが守る(Bが決める)
-    goalB: { x: (MAP_W - 1) * TILE, y: 6 * TILE, w: TILE, h: 4 * TILE }, // 味方Bが守る(Aが決める)
+    spawnsA: [tileCenter(5, 9), tileCenter(5, 12), tileCenter(5, 15)],
+    spawnsB: [tileCenter(30, 9), tileCenter(30, 12), tileCenter(30, 15)],
+    ballSpawn: tileCenter(18, 12),
+    goalA: { x: 0, y: 9 * TILE, w: TILE, h: 6 * TILE }, // 味方Aが守る(Bが決める)
+    goalB: { x: (MAP_W - 1) * TILE, y: 9 * TILE, w: TILE, h: 6 * TILE }, // 味方Bが守る(Aが決める)
   };
 }
 
 function buildSkyPitch() {
   const g = emptyGrid();
   border(g);
-  rect(g, 6, 3, 2, 2, "#");
-  rect(g, 16, 3, 2, 2, "#");
-  rect(g, 6, 11, 2, 2, "#");
-  rect(g, 16, 11, 2, 2, "#");
-  rect(g, 11, 2, 2, 1, "b");
-  rect(g, 11, 13, 2, 1, "b");
-  rect(g, 4, 7, 1, 2, "b");
-  rect(g, 19, 7, 1, 2, "b");
-  rect(g, 0, 6, 1, 4, ".");
-  rect(g, MAP_W - 1, 6, 1, 4, ".");
+  rect(g, 9, 5, 2, 2, "#");
+  rect(g, 25, 5, 2, 2, "#");
+  rect(g, 9, 17, 2, 2, "#");
+  rect(g, 25, 17, 2, 2, "#");
+  rect(g, 17, 3, 2, 1, "b");
+  rect(g, 17, 20, 2, 1, "b");
+  rect(g, 6, 11, 1, 2, "b");
+  rect(g, 29, 11, 1, 2, "b");
+  rect(g, 0, 9, 1, 6, ".");
+  rect(g, MAP_W - 1, 9, 1, 6, ".");
   return {
     id: "skypitch", name: "スカイピッチ", mode: "brawlball", grid: g,
-    spawnsA: [tileCenter(4, 6), tileCenter(4, 8), tileCenter(4, 10)],
-    spawnsB: [tileCenter(19, 6), tileCenter(19, 8), tileCenter(19, 10)],
-    ballSpawn: tileCenter(12, 8),
-    goalA: { x: 0, y: 6 * TILE, w: TILE, h: 4 * TILE },
-    goalB: { x: (MAP_W - 1) * TILE, y: 6 * TILE, w: TILE, h: 4 * TILE },
+    spawnsA: [tileCenter(5, 9), tileCenter(5, 12), tileCenter(5, 15)],
+    spawnsB: [tileCenter(30, 9), tileCenter(30, 12), tileCenter(30, 15)],
+    ballSpawn: tileCenter(18, 12),
+    goalA: { x: 0, y: 9 * TILE, w: TILE, h: 6 * TILE },
+    goalB: { x: (MAP_W - 1) * TILE, y: 9 * TILE, w: TILE, h: 6 * TILE },
   };
 }
 

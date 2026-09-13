@@ -65,7 +65,7 @@ function moveFighter(f, dt, map, now, allFighters) {
   }
   f.x = clamp(f.x, f.radius + TILE * 0.4, MAP_W * TILE - f.radius - TILE * 0.4);
   f.y = clamp(f.y, f.radius + TILE * 0.4, MAP_H * TILE - f.radius - TILE * 0.4);
-  // 他ファイターと軽く押し合う
+  // 他ファイターと軽く押し合う(壁に押し込まれないよう軸ごとに壁判定してから適用)
   for (const o of allFighters) {
     if (o === f || !o.alive) continue;
     const minD = f.radius + o.radius;
@@ -73,9 +73,13 @@ function moveFighter(f, dt, map, now, allFighters) {
     if (d > 0 && d < minD) {
       const push = (minD - d) / 2;
       const ax = (f.x - o.x) / d, ay = (f.y - o.y) / d;
-      f.x += ax * push; f.y += ay * push;
+      const nx = f.x + ax * push, ny = f.y + ay * push;
+      if (canOccupy(map, nx, f.y, f.radius)) f.x = nx;
+      if (canOccupy(map, f.x, ny, f.radius)) f.y = ny;
     }
   }
+  f.x = clamp(f.x, f.radius + TILE * 0.4, MAP_W * TILE - f.radius - TILE * 0.4);
+  f.y = clamp(f.y, f.radius + TILE * 0.4, MAP_H * TILE - f.radius - TILE * 0.4);
   if (f.hitFlash > 0) f.hitFlash = Math.max(0, f.hitFlash - dt * 6);
   // アモ回復
   if (f.ammo < f.ammoMax) {

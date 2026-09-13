@@ -1,9 +1,9 @@
 // ===== CPU(ボット)AI =====
 const AI_DIFF = {
-  weak: { aimJitter: 0.4, fireChance: 0.55, superChance: 0.5, dodge: false, reaction: 0.5, aggro: 0.6 },
-  normal: { aimJitter: 0.2, fireChance: 0.78, superChance: 0.75, dodge: false, reaction: 0.28, aggro: 0.85 },
-  strong: { aimJitter: 0.09, fireChance: 0.92, superChance: 0.9, dodge: true, reaction: 0.14, aggro: 1.05 },
-  pro: { aimJitter: 0.03, fireChance: 1.0, superChance: 1.0, dodge: true, reaction: 0.06, aggro: 1.25 },
+  weak: { aimJitter: 0.5, fireChance: 0.35, superChance: 0.35, dodge: false, reaction: 0.5, aggro: 0.5 },
+  normal: { aimJitter: 0.28, fireChance: 0.55, superChance: 0.6, dodge: false, reaction: 0.28, aggro: 0.75 },
+  strong: { aimJitter: 0.12, fireChance: 0.8, superChance: 0.85, dodge: true, reaction: 0.14, aggro: 1.0 },
+  pro: { aimJitter: 0.04, fireChance: 0.95, superChance: 1.0, dodge: true, reaction: 0.06, aggro: 1.2 },
 };
 
 function bushRevealDist() { return 95; }
@@ -84,7 +84,9 @@ function updateBotAI(f, mode, now, dt) {
     if (diff.dodge && Math.random() < 0.02) f._strafeDir = (f._strafeDir || 1) * -1;
     setMoveToward(f, mode, f.x + Math.cos(desiredAng) * 60, f.y + Math.sin(desiredAng) * 60);
     const los = clearLineOfSight(mode.map, f.x, f.y, enemy.x, enemy.y);
-    if (los && d <= atk.range && Math.random() < diff.fireChance) tryFire(f, mode, now);
+    // fireChanceは「1秒あたりの発砲判断確率」として毎フレームdt換算で判定する
+    // (毎フレーム同じ確率で判定すると、クールダウンが空くたびほぼ確実に撃ってしまい難易度差が出ない)
+    if (los && d <= atk.range && Math.random() < diff.fireChance * dt * 3) tryFire(f, mode, now);
     if (f.superCharge >= f.superMax && Math.random() < diff.superChance * dt * 3) fireSuper(f, mode, now);
   }
 
