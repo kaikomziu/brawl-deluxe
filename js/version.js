@@ -1,6 +1,13 @@
 // ===== 更新履歴 =====
-const BRAWL_VERSION = "1.3.0";
+const BRAWL_VERSION = "1.3.1";
 const CHANGELOG = [
+  {
+    version: "1.3.1",
+    date: "2026-09-13",
+    notes: [
+      "全10ファイターを最初から解放。トロフィーによる開放制限を撤廃(トロフィーの獲得・表示はそのまま)",
+    ],
+  },
   {
     version: "1.3.0",
     date: "2026-09-13",

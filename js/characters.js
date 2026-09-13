@@ -130,4 +130,5 @@ function getBrawler(id) { return BRAWLERS.find(b => b.id === id); }
 
 // 解放順(所持トロフィー合計でアンロック)。最初の3体は最初から使える。
 const UNLOCK_ORDER = ["rex", "tanker", "shota", "bomta", "wind", "heal", "frost", "venom", "nova", "ghost"];
-const UNLOCK_THRESHOLDS = [0, 0, 0, 30, 60, 100, 150, 210, 280, 360];
+// 全ファイターを最初から解放(トロフィーによるロックは無し)。トロフィー表示・獲得自体はそのまま残す。
+const UNLOCK_THRESHOLDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
